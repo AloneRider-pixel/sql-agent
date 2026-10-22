@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pydantic
+pytest
+httpx
+sqlglot
+psycopg2-binary
+pgserver
