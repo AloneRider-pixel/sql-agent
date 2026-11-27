@@ -62,7 +62,8 @@ def validate_readonly(sql: str) -> str:
         stmt.set("limit", exp.Limit(expression=exp.Literal.number(MAX_ROWS)))
     else:
         value = limit.expression
-        if isinstance(value, exp.Literal) and value.is_int and int(value.name) > MAX_ROWS:
+        within_cap = isinstance(value, exp.Literal) and value.is_int and int(value.name) <= MAX_ROWS
+        if not within_cap:  # oversized, LIMIT ALL or any non-literal expression
             stmt = stmt.copy()
             stmt.set("limit", exp.Limit(expression=exp.Literal.number(MAX_ROWS)))
     return stmt.sql(dialect="postgres")
