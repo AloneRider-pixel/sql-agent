@@ -23,6 +23,9 @@ DENIED_FUNCTIONS = {
     "pg_terminate_backend", "pg_cancel_backend", "pg_read_file",
     "pg_write_file", "pg_ls_dir", "current_setting", "query_to_xml",
     "nextval", "setval", "pg_advisory_lock", "pg_advisory_xact_lock",
+    "pg_try_advisory_lock", "pg_try_advisory_xact_lock",
+    "pg_advisory_lock_shared", "pg_advisory_xact_lock_shared",
+    "pg_try_advisory_lock_shared", "pg_try_advisory_xact_lock_shared",
 }
 
 MAX_ROWS = 1000
