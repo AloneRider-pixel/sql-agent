@@ -141,6 +141,10 @@ def test_api_roundtrip_and_guard(pg):
     "SELECT * INTO newt FROM employees",
     "SELECT * FROM employees FOR UPDATE",
     "SELECT nextval('s')",
+    "SELECT pg_try_advisory_lock(1)",
+    "SELECT pg_try_advisory_xact_lock(1)",
+    "SELECT pg_advisory_lock_shared(1)",
+    "SELECT pg_try_advisory_xact_lock_shared(1)",
     "SELECT setval('s', 1)",
 ])
 def test_guard_rejects_into_locks_and_sequence_functions(bad):
