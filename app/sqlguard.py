@@ -14,12 +14,15 @@ DENIED_NODES = (
     exp.Insert, exp.Update, exp.Delete, exp.Drop, exp.Alter,
     exp.Create, exp.TruncateTable, exp.Merge, exp.Command,
     exp.Grant, exp.Copy, exp.LoadData,
+    exp.Into,   # SELECT ... INTO creates a table
+    exp.Lock,   # FOR UPDATE / FOR SHARE take row locks
 )
 
 DENIED_FUNCTIONS = {
     "pg_sleep", "dblink", "lo_export", "lo_import", "set_config",
     "pg_terminate_backend", "pg_cancel_backend", "pg_read_file",
     "pg_write_file", "pg_ls_dir", "current_setting", "query_to_xml",
+    "nextval", "setval", "pg_advisory_lock", "pg_advisory_xact_lock",
 }
 
 MAX_ROWS = 1000
@@ -53,7 +56,13 @@ def validate_readonly(sql: str) -> str:
         if isinstance(node, exp.Func) and getattr(node, "sql_name", lambda: "")().lower() in DENIED_FUNCTIONS:
             raise UnsafeSQL(f"forbidden function: {node.sql_name()}")
 
-    if not stmt.args.get("limit") and not (isinstance(stmt, exp.Union) and stmt.args.get("limit")):
+    limit = stmt.args.get("limit")
+    if not limit:
         stmt = stmt.copy()
         stmt.set("limit", exp.Limit(expression=exp.Literal.number(MAX_ROWS)))
+    else:
+        value = limit.expression
+        if isinstance(value, exp.Literal) and value.is_int and int(value.name) > MAX_ROWS:
+            stmt = stmt.copy()
+            stmt.set("limit", exp.Limit(expression=exp.Literal.number(MAX_ROWS)))
     return stmt.sql(dialect="postgres")
