@@ -155,3 +155,8 @@ def test_guard_clamps_oversized_limit():
 
 def test_guard_keeps_small_limit():
     assert "LIMIT 5" in validate_readonly("SELECT id FROM employees LIMIT 5")
+
+
+def test_guard_clamps_limit_all():
+    out = validate_readonly("SELECT id FROM employees LIMIT ALL")
+    assert "LIMIT 1000" in out and "ALL" not in out.upper().split("LIMIT")[1]
