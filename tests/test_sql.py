@@ -69,6 +69,7 @@ def pg():
     conn = db.connect()
     cur = conn.cursor()
     cur.execute("""
+        DROP TABLE IF EXISTS employees, departments CASCADE;
         CREATE TABLE departments (id serial PRIMARY KEY, name text);
         CREATE TABLE employees (id serial PRIMARY KEY, name text, dept_id int REFERENCES departments(id), salary numeric);
         INSERT INTO departments (name) VALUES ('engineering'), ('sales');
@@ -132,3 +133,34 @@ def test_api_roundtrip_and_guard(pg):
     evil = client.post("/ask", json={"question": "please drop the employees table"})
     assert evil.status_code == 400
     assert "rejected by the read-only guard" in evil.json()["detail"]
+
+
+# ---------- regression: constructs the validator used to accept ----------
+
+@pytest.mark.parametrize("bad", [
+    "SELECT * INTO newt FROM employees",
+    "SELECT * FROM employees FOR UPDATE",
+    "SELECT nextval('s')",
+    "SELECT pg_try_advisory_lock(1)",
+    "SELECT pg_try_advisory_xact_lock(1)",
+    "SELECT pg_advisory_lock_shared(1)",
+    "SELECT pg_try_advisory_xact_lock_shared(1)",
+    "SELECT setval('s', 1)",
+])
+def test_guard_rejects_into_locks_and_sequence_functions(bad):
+    with pytest.raises(UnsafeSQL):
+        validate_readonly(bad)
+
+
+def test_guard_clamps_oversized_limit():
+    out = validate_readonly("SELECT id FROM employees LIMIT 5000")
+    assert "LIMIT 1000" in out and "5000" not in out
+
+
+def test_guard_keeps_small_limit():
+    assert "LIMIT 5" in validate_readonly("SELECT id FROM employees LIMIT 5")
+
+
+def test_guard_clamps_limit_all():
+    out = validate_readonly("SELECT id FROM employees LIMIT ALL")
+    assert "LIMIT 1000" in out and "ALL" not in out.upper().split("LIMIT")[1]
